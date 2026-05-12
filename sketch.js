@@ -34,6 +34,17 @@ function draw() {
   let x = (width - w) / 2; // 置中水平座標
   let y = (height - h) / 2; // 置中垂直座標
 
+  // 新增：繪製畫布上方文字
+  push();
+  fill(0); // 設定文字顏色為黑色
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textSize(32);
+  text("412730946謝同學", width / 2, y / 2 - 20);
+  textSize(24);
+  text("作品為影像辨識_耳環臉譜", width / 2, y / 2 + 20);
+  pop();
+
   push();
   // 將座標系移動到影像預定位置的右緣，準備進行翻轉
   translate(x + w, y);
