@@ -1,10 +1,10 @@
 let video;
-let bodyPose;
-let poses = [];
+let faceMesh;
+let faces = [];
 
 function preload() {
-  // 載入 ml5.js 的 bodyPose 模型進行影像辨識
-  bodyPose = ml5.bodyPose();
+  // 改用 faceMesh，對於只有頭部入鏡的攝影機畫面辨識率極高
+  faceMesh = ml5.faceMesh();
 }
 
 function setup() {
@@ -16,13 +16,13 @@ function setup() {
   // 隱藏原始的 HTML 影片元件
   video.hide();
 
-  // 開始持續偵測身體姿勢 (包含耳朵特徵點)
-  bodyPose.detectStart(video, gotPoses);
+  // 開始持續偵測臉部
+  faceMesh.detectStart(video, gotFaces);
 }
 
-function gotPoses(results) {
-  // 將辨識結果存入 poses 變數
-  poses = results;
+function gotFaces(results) {
+  // 將辨識結果存入 faces 變數
+  faces = results;
 }
 
 function draw() {
@@ -42,31 +42,39 @@ function draw() {
   // 繪製影像
   image(video, 0, 0, w, h);
 
-  // 若辨識到身體特徵點，則在左右耳處畫出三個黃色圓圈 (耳環效果)
-  if (poses.length > 0) {
-    let pose = poses[0];
-    // 取出左右耳的特徵資料
-    let leftEar = pose.left_ear;
-    let rightEar = pose.right_ear;
+  // 若辨識到臉部特徵點，則在左右耳處畫出三個黃色圓圈 (耳環效果)
+  if (faces.length > 0) {
+    let face = faces[0];
+    
+    // FaceMesh 中，132 為左耳垂附近，361 為右耳垂附近
+    let leftEar = face.keypoints[132];
+    let rightEar = face.keypoints[361];
 
-    // 信心指數大於 0.1 才繪製，避免畫面雜訊造成誤判
-    if (leftEar.confidence > 0.1) {
-      drawEarring(leftEar.x, leftEar.y, w, h);
-    }
-    if (rightEar.confidence > 0.1) {
-      drawEarring(rightEar.x, rightEar.y, w, h);
-    }
+    if (leftEar) drawEarring(leftEar.x, leftEar.y, w, h);
+    if (rightEar) drawEarring(rightEar.x, rightEar.y, w, h);
+  } else {
+    // 若沒有偵測到臉部，顯示提示文字 (需先還原翻轉狀態以免字體左右相反)
+    pop();
+    fill(255, 100, 100);
+    noStroke();
+    textSize(24);
+    textAlign(CENTER);
+    text("正在尋找臉部... (請確保臉部在鏡頭前)", width / 2, y - 20);
+    push(); // 補回 push 以免最後的 pop 報錯
   }
   pop();
 }
 
 function drawEarring(earX, earY, imgW, imgH) {
-  // 將偵測到的原始影片座標對應到畫面上顯示的影像大小
-  let px = map(earX, 0, video.width, 0, imgW);
-  let py = map(earY, 0, video.height, 0, imgH);
+  // 將偵測到的原始影片座標(固定為 640x480)對應到畫面上顯示的影像大小
+  // 改用固定的 640 與 480，避免影片尚未載入時造成座標計算錯誤
+  let px = map(earX, 0, 640, 0, imgW);
+  let py = map(earY, 0, 480, 0, imgH);
 
-  fill(255, 255, 0); // 設定圓圈顏色為黃色
-  noStroke();
+  fill(255, 204, 0); // 設定為較鮮豔的黃色
+  stroke(255);       // 加上白色邊框讓耳環更明顯
+  strokeWeight(2);
+  
   // 稍微向下偏移模擬耳垂位置，垂直向下連續畫出三個圓圈
   let startY = py + 15;
   for (let i = 0; i < 3; i++) {
